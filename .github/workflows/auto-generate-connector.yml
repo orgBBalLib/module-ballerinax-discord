@@ -23,7 +23,7 @@ jobs:
   analyze:
     name: Analyze connector version changes
     needs: [generate]
-    if: ${{ always() && (needs.generate.result == 'success' || needs.generate.result == 'skipped') }}
+    if: ${{ always() && (needs.generate.result == 'success' || needs.generate.result == 'failure') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -424,6 +424,9 @@ jobs:
               prBody += '\n';
             }
 
+            const pipelineSucceeded = '${{ needs.generate.outputs.pipeline_succeeded }}' === 'true';
+            const doNotMergePrefix = pipelineSucceeded ? '' : '[DO NOT MERGE] ';
+
             const { execSync } = require('child_process');
             const hasChangelogUpdate = (() => {
               try {
@@ -455,7 +458,7 @@ jobs:
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `${buildStatus}[${analysis.changeType}] Auto-generated connector update - v${{ steps.update_version.outputs.new_version }}`,
+              title: `${doNotMergePrefix}${buildStatus}[${analysis.changeType}] Auto-generated connector update - v${{ steps.update_version.outputs.new_version }}`,
               head: branchName,
               base: 'main',
               body: prBody
