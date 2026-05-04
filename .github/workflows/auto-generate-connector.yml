@@ -86,6 +86,8 @@ jobs:
 
       - name: Run analysis
         if: steps.diff.outputs.has_changes == 'true'
+        id: run_analysis
+        continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -106,6 +108,7 @@ jobs:
       - name: Update version in gradle.properties
         if: steps.diff.outputs.has_changes == 'true'
         id: update_version
+        continue-on-error: true
         run: |
           BRANCH_NAME="${{ steps.find_branch.outputs.branch_name }}"
           git stash || true
@@ -147,6 +150,7 @@ jobs:
 
       - name: Update CHANGELOG.md
         if: steps.diff.outputs.has_changes == 'true'
+        continue-on-error: true
         run: |
           echo "Building PR description for changelog..."
 
@@ -273,6 +277,7 @@ jobs:
 
       - name: Commit version changes and generated files
         if: steps.diff.outputs.has_changes == 'true'
+        continue-on-error: true
         run: |
           BRANCH_NAME="${{ steps.find_branch.outputs.branch_name }}"
           git config --local user.email "ballerina-bot@ballerina.io"
@@ -337,17 +342,28 @@ jobs:
           git push origin $BRANCH_NAME
 
       - name: Create Pull Request
-        if: steps.diff.outputs.has_changes == 'true'
+        if: always() && steps.diff.outputs.has_changes == 'true'
         id: create_pr
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
             const fs = require('fs');
-            const analysis = JSON.parse(fs.readFileSync('analysis_result.json', 'utf8'));
             const gradleBuildFailed = '${{ steps.gradle_build.outcome }}' === 'failure';
+            const analysisFailed = '${{ steps.run_analysis.outcome }}' !== 'success';
             const branchName = '${{ steps.find_branch.outputs.branch_name }}';
             const codeOwners = '${{ steps.extract_owners.outputs.code_owners }}';
+
+            // analysis_result.json may not exist if analysis failed
+            let analysis = null;
+            try {
+              analysis = JSON.parse(fs.readFileSync('analysis_result.json', 'utf8'));
+            } catch (e) {
+              core.warning('analysis_result.json not found: ' + e.message);
+            }
+
+            const changeType = analysis ? analysis.changeType : 'UNKNOWN';
+            const newVersion = '${{ steps.update_version.outputs.new_version }}' || 'unknown';
 
             function formatChange(change) {
               const separators = [' - ', ': ', ' – '];
@@ -385,47 +401,45 @@ jobs:
 
             let prBody = `## Version Change Analysis\n\n`;
 
+            if (analysisFailed) {
+              prBody += `> ⚠️ WARNING: ANALYSIS FAILED — version and changelog could not be determined automatically. Manual review required.\n\n`;
+            }
             if (gradleBuildFailed) {
-              prBody += `> ⚠️ WARNING: GRADLE BUILD FAILED - Manual intervention required\n\n`;
+              prBody += `> ⚠️ WARNING: GRADLE BUILD FAILED — Manual intervention required\n\n`;
             }
 
-            prBody += `**Recommended Version Bump:** \`${analysis.changeType}\`\n`;
-            prBody += `**New Version:** \`${{ steps.update_version.outputs.new_version }}\`\n`;
-            prBody += `**Confidence:** ${analysis.confidence}\n`;
+            prBody += `**Recommended Version Bump:** \`${changeType}\`\n`;
+            prBody += `**New Version:** \`${newVersion}\`\n`;
+            if (analysis) prBody += `**Confidence:** ${analysis.confidence}\n`;
             prBody += `**Build Status:** ${gradleBuildFailed ? '❌ FAILED' : '✅ Success'}\n`;
 
             if (codeOwners) {
               prBody += `**Code Owners:** ${codeOwners.split(',').map(o => `@${o}`).join(', ')}\n`;
             }
 
-            prBody += `\n### Summary\n${analysis.summary}\n\n`;
+            if (analysis) {
+              prBody += `\n### Summary\n${analysis.summary}\n\n`;
 
-            if (analysis.breakingChanges.length > 0) {
-              prBody += `### Breaking Changes\n`;
-              analysis.breakingChanges.forEach(change => {
-                prBody += `- ${formatChange(change)}\n`;
-              });
-              prBody += '\n';
-            }
-
-            if (analysis.newFeatures.length > 0) {
-              prBody += `### New Features\n`;
-              analysis.newFeatures.forEach(feature => {
-                prBody += `- ${formatChange(feature)}\n`;
-              });
-              prBody += '\n';
-            }
-
-            if (analysis.bugFixes.length > 0) {
-              prBody += `### Improvements\n`;
-              analysis.bugFixes.forEach(fix => {
-                prBody += `- ${formatChange(fix)}\n`;
-              });
-              prBody += '\n';
+              if (analysis.breakingChanges.length > 0) {
+                prBody += `### Breaking Changes\n`;
+                analysis.breakingChanges.forEach(change => { prBody += `- ${formatChange(change)}\n`; });
+                prBody += '\n';
+              }
+              if (analysis.newFeatures.length > 0) {
+                prBody += `### New Features\n`;
+                analysis.newFeatures.forEach(feature => { prBody += `- ${formatChange(feature)}\n`; });
+                prBody += '\n';
+              }
+              if (analysis.bugFixes.length > 0) {
+                prBody += `### Improvements\n`;
+                analysis.bugFixes.forEach(fix => { prBody += `- ${formatChange(fix)}\n`; });
+                prBody += '\n';
+              }
             }
 
             const pipelineSucceeded = '${{ needs.generate.outputs.pipeline_succeeded }}' === 'true';
             const doNotMergePrefix = pipelineSucceeded ? '' : '[DO NOT MERGE] ';
+            const analysisPrefix = analysisFailed ? '[ANALYSIS FAILED] ' : '';
 
             const { execSync } = require('child_process');
             const hasChangelogUpdate = (() => {
@@ -458,7 +472,7 @@ jobs:
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `${doNotMergePrefix}${buildStatus}[${analysis.changeType}] Auto-generated connector update - v${{ steps.update_version.outputs.new_version }}`,
+              title: `${doNotMergePrefix}${buildStatus}${analysisPrefix}[${changeType}] Auto-generated connector update - v${newVersion}`,
               head: branchName,
               base: 'main',
               body: prBody
@@ -472,17 +486,19 @@ jobs:
             return pr.data.number;
 
       - name: Add labels to PR
-        if: steps.diff.outputs.has_changes == 'true'
+        if: always() && steps.diff.outputs.has_changes == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
             const gradleBuildFailed = '${{ steps.gradle_build.outcome }}' === 'failure';
+            const analysisFailed = '${{ steps.run_analysis.outcome }}' !== 'success';
+            const pipelineSucceeded = '${{ needs.generate.outputs.pipeline_succeeded }}' === 'true';
             const labels = ['manual-review-required'];
 
-            if (gradleBuildFailed) {
-              labels.push('build-failed');
-            }
+            if (gradleBuildFailed) labels.push('build-failed');
+            if (analysisFailed) labels.push('analysis-failed');
+            if (!pipelineSucceeded) labels.push('do-not-merge');
 
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
