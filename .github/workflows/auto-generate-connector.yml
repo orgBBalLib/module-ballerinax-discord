@@ -270,7 +270,7 @@ jobs:
           fi
 
       - name: Set up Java
-        if: steps.diff.outputs.has_changes == 'true'
+        if: steps.diff.outputs.has_changes == 'true' && needs.generate.outputs.pipeline_succeeded == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -278,7 +278,7 @@ jobs:
 
       - name: Run Gradle build to generate Ballerina files
         id: gradle_build
-        if: steps.diff.outputs.has_changes == 'true'
+        if: steps.diff.outputs.has_changes == 'true' && needs.generate.outputs.pipeline_succeeded == 'true'
         continue-on-error: true
         env:
           packageUser: ${{ github.actor }}
@@ -364,6 +364,7 @@ jobs:
             const fs = require('fs');
             const gradleBuildFailed = '${{ steps.gradle_build.outcome }}' === 'failure';
             const analysisFailed = '${{ steps.run_analysis.outcome }}' === 'failure';
+            const pipelineSucceeded = '${{ needs.generate.outputs.pipeline_succeeded }}' === 'true';
             const branchName = '${{ steps.find_branch.outputs.branch_name }}';
             const codeOwners = '${{ steps.extract_owners.outputs.code_owners }}';
 
@@ -420,11 +421,15 @@ jobs:
             if (gradleBuildFailed) {
               prBody += `> ⚠️ WARNING: GRADLE BUILD FAILED — Manual intervention required\n\n`;
             }
+            if (!pipelineSucceeded) {
+              prBody += `> ℹ️ NOTE: Gradle build was skipped — generation pipeline did not succeed, building against old files would give false results.\n\n`;
+            }
 
             prBody += `**Recommended Version Bump:** \`${changeType}\`\n`;
             prBody += `**New Version:** \`${newVersion}\`\n`;
             if (analysis) prBody += `**Confidence:** ${analysis.confidence}\n`;
-            prBody += `**Build Status:** ${gradleBuildFailed ? '❌ FAILED' : '✅ Success'}\n`;
+            const buildStatusText = gradleBuildFailed ? '❌ FAILED' : (!pipelineSucceeded ? '⏭️ Skipped (generation pipeline failed)' : '✅ Success');
+            prBody += `**Build Status:** ${buildStatusText}\n`;
 
             if (codeOwners) {
               prBody += `**Code Owners:** ${codeOwners.split(',').map(o => `@${o}`).join(', ')}\n`;
@@ -450,7 +455,6 @@ jobs:
               }
             }
 
-            const pipelineSucceeded = '${{ needs.generate.outputs.pipeline_succeeded }}' === 'true';
             const doNotMergePrefix = pipelineSucceeded ? '' : '[DO NOT MERGE] ';
             const analysisPrefix = analysisFailed ? '[ANALYSIS FAILED] ' : '';
 
