@@ -1,59 +1,45 @@
-# Ballerina Discord Connector
+
+# Ballerina discord connector
 
 [![Build](https://github.com/ballerina-platform/module-ballerinax-discord/actions/workflows/ci.yml/badge.svg)](https://github.com/ballerina-platform/module-ballerinax-discord/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/ballerina-platform/module-ballerinax-discord/branch/main/graph/badge.svg)](https://codecov.io/gh/ballerina-platform/module-ballerinax-discord)
+[![Trivy](https://github.com/ballerina-platform/module-ballerinax-discord/actions/workflows/trivy-scan.yml/badge.svg)](https://github.com/ballerina-platform/module-ballerinax-discord/actions/workflows/trivy-scan.yml)
+[![GraalVM Check](https://github.com/ballerina-platform/module-ballerinax-discord/actions/workflows/build-with-bal-test-graalvm.yml/badge.svg)](https://github.com/ballerina-platform/module-ballerinax-discord/actions/workflows/build-with-bal-test-graalvm.yml)
 [![GitHub Last Commit](https://img.shields.io/github/last-commit/ballerina-platform/module-ballerinax-discord.svg)](https://github.com/ballerina-platform/module-ballerinax-discord/commits/master)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub Issues](https://img.shields.io/github/issues/ballerina-platform/ballerina-library/module/discord.svg?label=Open%20Issues)](https://github.com/ballerina-platform/ballerina-library/labels/module%discord)
 
 ## Overview
 
-[Discord](https://support.discord.com/hc/en-us/articles/360045138571-Beginner-s-Guide-to-Discord) is a popular communication platform designed for creating communities and facilitating real-time messaging, voice, and video interactions over the internet.
+[Discord](https://discord.com/) is a communication platform that enables communities and teams to connect through text, voice, and video chat, providing a space for real-time collaboration and engagement.
 
-The Ballerina Discord connector offers APIs to connect and interact with the [Discord REST API v10](https://discord.com/developers/docs/reference).
-
+The `ballerinax/discord` package offers APIs to connect and interact with [Discord API](https://discord.com/developers/docs/intro) endpoints, specifically based on [Discord API v10](https://discord.com/developers/docs/reference#api-versioning).
 ## Setup guide
 
-Follow these steps to create a Discord developer account.
+To use the Discord connector, you must have access to the Discord API through a [Discord Developer Portal](https://discord.com/developers/docs/intro) account and obtain a Bot Token. If you do not have a Discord account, you can sign up for one [here](https://discord.com/register).
 
-### Step 1: Login to Discord developer page
+### Step 1: Create a Discord Account
 
-1. Visit [Discord developer portal](https://discord.com/login?redirect_to=%2Fdevelopers) by logging into your Discord account. 
+1. Navigate to the [Discord website](https://discord.com/) and sign up for an account or log in if you already have one.
 
-    <img src="https://github.com/ballerina-platform/module-ballerinax-discord/blob/main/docs/setup/resources/discord-dev-page.png?raw=true" alt="Discord Dev Page" style="width: 70%;">
+2. Discord API access is available to all users at no cost. There are no subscription plan requirements to create applications and bots.
 
-2. If you do not have a Discord account already, [create a new discord account](https://discord.com/login) by clicking on the `Register` hyperlink below the `Log In` button when opening the Discord developer page.
+### Step 2: Generate a Bot Token
 
-    <img src= "https://github.com/ballerina-platform/module-ballerinax-discord/blob/main/docs/setup/resources/create-acc.png?raw=true" alt="Create Discord Account" style="width: 70%;">
+1. Log in to your Discord account and navigate to the [Discord Developer Portal](https://discord.com/developers/applications).
 
-3. Complete the account creation process by including the relevant information in the given fields.
+2. Click the "New Application" button in the top right corner, enter a name for your application, and click "Create".
 
-### Step 2: Make a new Discord application
+3. In the left sidebar of your application page, select "Bot".
 
-1. Once in the Discord developer portal is open, click on the `New Application` button as displayed above to start the process.
+4. Click the "Reset Token" button (or "Add Bot" if creating for the first time) to generate a new bot token.
 
-    <img src="https://github.com/ballerina-platform/module-ballerinax-discord/blob/main/docs/setup/resources/make-new-app.png?raw=true" alt="Make New Application" style="width: 70%;">
+5. Click "Copy" to copy your bot token to the clipboard.
 
-### Step 3: Name the Discord Application 
-
-1. Proceed by giving the Discord Application a name and click on the terms of service.
-
-    <img src="https://github.com/ballerina-platform/module-ballerinax-discord/blob/main/docs/setup/resources/create-app.png?raw=true" alt="Name and Create the App" style="width: 70%;">
-
-2. Finally complete the naming process by clicking on the `next` button.
-
-### Step 4: Obtain the Client ID and Client Secret
-
-1. Under the `OAuth2` section found on the left-sided list, locate the Client's Information as shown on the screen. To implement the functionalities provided by Discord's API, you will need the Client ID and Client Secret.
-
-    <img src="https://github.com/ballerina-platform/module-ballerinax-discord/blob/main/docs/setup/resources/obtain-client-id.png?raw=true" alt="Obtain Client ID and Secret" style="width: 70%;">
-
+> **Tip:** You must copy and store this key somewhere safe. It won't be visible again in the Developer Portal for security reasons, and you will need to regenerate it if lost.
 ## Quickstart
 
-To use the `discord` connector in your Ballerina application, modify the `.bal` file as follows:
+To use the `discord` connector in your Ballerina application, update the `.bal` file as follows:
 
 ### Step 1: Import the module
-
-Import the `discord` module.
 
 ```ballerina
 import ballerinax/discord;
@@ -61,66 +47,69 @@ import ballerinax/discord;
 
 ### Step 2: Instantiate a new connector
 
-Create a `discord:ConnectionConfig` with the obtained OAuth2.0 Client Credentials and initialize the connector with it.
+1. Create a `Config.toml` file and configure the obtained bot token:
 
-Apps must receive approval from users installing them to perform actions within Discord. To enable these functions, specific scopes must be defined. These scopes are outlined in the [OAuth2 Scopes documentation](https://discord.com/developers/docs/topics/oauth2#shared-resources-oauth2-scopes).
+```toml
+token = "<Your_Discord_Bot_Token>"
+```
+
+2. Create a `discord:ConnectionConfig` and initialize the client:
 
 ```ballerina
-configurable string clientId = ?;
-configurable string clientSecret = ?;
-configurable string[] scopes = ?;
+configurable string token = ?;
 
-discord:Client discord = check new({
+final discord:Client discordClient = check new({
     auth: {
-            clientId,
-            clientSecret,
-            scopes
-        }
+        token
+    }
 });
 ```
 
-
 ### Step 3: Invoke the connector operation
+
 Now, utilize the available connector operations.
 
-### Return linked third-party accounts of the user
+#### Create a new guild
 
 ```ballerina
 public function main() returns error? {
-    ConnectedAccountResponse[] connectedAccounts = check discord->/users/\@me/connections();
+    discord:GuildCreateRequest newGuild = {
+        name: "My Awesome Server"
+    };
+
+    discord:GuildResponse response = check discordClient->/guilds.post(newGuild);
 }
-````
+```
 
 ### Step 4: Run the Ballerina application
 
 ```bash
 bal run
 ```
-
 ## Examples
 
-The `Discord` connector provides practical examples illustrating usage in various scenarios. Explore these [examples](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/), covering the following use cases:
+The `Discord` connector provides practical examples illustrating usage in various scenarios. Explore these [examples](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples), covering the following use cases:
 
-1. [Automated Event Reminders](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/automated-event-reminders) - This use case illustrates how the Discord API can be leveraged to create a scheduled event in a Discord server and automate daily reminders about this event across all channels within the server.
-
-2. [Automated Role Assignment Based on Reactions](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/automated-role-assignment) - This use case illustrates the utilization of the Discord API to assign roles to members based on their interests, enabling them to gain roles by reacting to designated messages.
-
+1. [Discord event scheduling](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/discord-event-scheduling) - Demonstrates how to create and manage scheduled events in a Discord server.
+2. [Guild emoji management](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/guild-emoji-management) - Illustrates creating, retrieving, and deleting custom emojis in a guild.
+3. [Guild channel webhook setup](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/guild-channel-webhook-setup) - Shows how to configure and manage webhooks for guild channels.
+4. [Inactive member prune workflow](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/inactive-member-prune-workflow) - Demonstrates how to identify and remove inactive members from a guild.
 ## Build from the source
 
-### Prerequisites
+### Setting up the prerequisites
 
-1. Download and install Java SE Development Kit (JDK) version 17. You can download it from either of the following sources:
+1. Download and install Java SE Development Kit (JDK) version 21. You can download it from either of the following sources:
 
     * [Oracle JDK](https://www.oracle.com/java/technologies/downloads/)
     * [OpenJDK](https://adoptium.net/)
 
-   > **Note:** After installation, remember to set the `JAVA_HOME` environment variable to the directory where JDK was installed.
+    > **Note:** After installation, remember to set the `JAVA_HOME` environment variable to the directory where JDK was installed.
 
 2. Download and install [Ballerina Swan Lake](https://ballerina.io/).
 
 3. Download and install [Docker](https://www.docker.com/get-started).
 
-   > **Note**: Ensure that the Docker daemon is running before executing any tests.
+    > **Note**: Ensure that the Docker daemon is running before executing any tests.
 
 4. Export Github Personal access token with read package permissions as follows,
 
@@ -135,39 +124,39 @@ Execute the commands below to build from the source.
 
 1. To build the package:
 
-   ```bash
-   ./gradlew clean build
-   ```
+    ```bash
+    ./gradlew clean build
+    ```
 
 2. To run the tests:
 
-   ```bash
-   ./gradlew clean test
-   ```
+    ```bash
+    ./gradlew clean test
+    ```
 
 3. To build the without the tests:
 
-   ```bash
-   ./gradlew clean build -x test
-   ```
+    ```bash
+    ./gradlew clean build -x test
+    ```
 
-4. To run tests against different environment:
+4. To run tests against different environments:
 
-   ```bash
-   ./gradlew clean test -Pgroups=<Comma separated groups/test cases>
-   ```
+    ```bash
+    ./gradlew clean test -Pgroups=<Comma separated groups/test cases>
+    ```
 
-5. To debug package with a remote debugger:
+5. To debug the package with a remote debugger:
 
-   ```bash
-   ./gradlew clean build -Pdebug=<port>
-   ```
+    ```bash
+    ./gradlew clean build -Pdebug=<port>
+    ```
 
 6. To debug with the Ballerina language:
 
-   ```bash
-   ./gradlew clean build -PbalJavaDebug=<port>
-   ```
+    ```bash
+    ./gradlew clean build -PbalJavaDebug=<port>
+    ```
 
 7. Publish the generated artifacts to the local Ballerina Central repository:
 
@@ -177,6 +166,24 @@ Execute the commands below to build from the source.
 
 8. Publish the generated artifacts to the Ballerina Central repository:
 
-   ```bash
-   ./gradlew clean build -PpublishToCentral=true
-   ```
+    ```bash
+    ./gradlew clean build -PpublishToCentral=true
+    ```
+
+## Contribute to Ballerina
+
+As an open-source project, Ballerina welcomes contributions from the community.
+
+For more information, go to the [contribution guidelines](https://github.com/ballerina-platform/ballerina-lang/blob/master/CONTRIBUTING.md).
+
+## Code of conduct
+
+All the contributors are encouraged to read the [Ballerina Code of Conduct](https://ballerina.io/code-of-conduct).
+
+
+## Useful links
+
+* For more information go to the [`discord` package](https://central.ballerina.io/ballerinax/discord/latest).
+* For example demonstrations of the usage, go to [Ballerina By Examples](https://ballerina.io/learn/by-example/).
+* Chat live with us via our [Discord server](https://discord.gg/ballerinalang).
+* Post all technical questions on Stack Overflow with the [#ballerina](https://stackoverflow.com/questions/tagged/ballerina) tag.
