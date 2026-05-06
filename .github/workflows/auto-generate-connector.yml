@@ -104,19 +104,22 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          cp temp-library/connector_automator/modules/client_regenerator/analyze_version_change.bal ./
-          bal run analyze_version_change.bal -- "$(cat git_diff.txt)"
-          rm -f analyze_version_change.bal
+          ANALYSIS_PKG=$(mktemp -d)
+          cp temp-library/connector_automator/modules/client_regenerator/analyze_version_change.bal "$ANALYSIS_PKG/"
+          cat > "$ANALYSIS_PKG/Ballerina.toml" << 'TOML'
+          [package]
+          org = "temp"
+          name = "analyze_runner"
+          version = "0.1.0"
 
-      - name: Display results
-        if: always()
-        run: |
-          if [ -f analysis_result.json ]; then
-            echo "Analysis Results:"
-            cat analysis_result.json | jq '.'
-          else
-            echo "No analysis result file found"
-          fi
+          [[dependency]]
+          org = "ballerinax"
+          name = "ai.anthropic"
+          version = "1.3.1"
+          TOML
+          bal run "$ANALYSIS_PKG" -- git_diff.txt
+          rm -rf "$ANALYSIS_PKG"
+
 
       - name: Update version in gradle.properties
         if: steps.diff.outputs.has_code_changes == 'true'
