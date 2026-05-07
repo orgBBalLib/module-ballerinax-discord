@@ -1,8 +1,14 @@
 # Examples
 
-The `ballerinax/discord` connector provides practical examples illustrating usage in various scenarios. Explore the below examples, covering use cases like automated event announcements and automated role assignment based on reactions.
+The `discord` connector provides practical examples illustrating usage in various scenarios. Explore these [examples](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples), covering use cases like guild onboarding configuration, guild event RSVP tracking, channel announcement pinning, and guild role management.
 
-1. [Automated Event Reminders](/examples/automated-event-reminders/Discord%20automated%20event%20reminders.md)
+1. [Guild onboarding configuration](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/guild-onboarding-configuration) - Configure and manage the onboarding process for new members joining a Discord guild.
+
+2. [Guild event RSVP tracking](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/guild-event-rsvp-tracking) - Track and manage RSVP responses for scheduled events within a Discord guild.
+
+3. [Channel announcement pinning](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/channel-announcement-pinning) - Automatically pin important announcements to Discord channels for easy visibility.
+
+4. [Guild role management](https://github.com/ballerina-platform/module-ballerinax-discord/tree/main/examples/guild-role-management) - Manage and assign roles to members within a Discord guild programmatically.
 
 ## Prerequisites
 
@@ -11,9 +17,7 @@ The `ballerinax/discord` connector provides practical examples illustrating usag
 2. For each example, create a `Config.toml` file the related configuration. Here's an example of how your `Config.toml` file should look:
 
     ```toml
-    clientId="<client_id>"
-    clientSecret="<client_secret>"
-    scopes=["<scope1>", "<scope2>"]
+    token = "<Access Token>"
     ```
 
 ## Running an Example
@@ -30,22 +34,4 @@ Execute the following commands to build an example from the source:
 
     ```bash
     bal run
-    ```
-
-## Building the Examples with the Local Module
-
-**Warning**: Due to the absence of support for reading local repositories for single Ballerina files, the Bala of the module is manually written to the central repository as a workaround. Consequently, the bash script may modify your local Ballerina repositories.
-
-Execute the following commands to build all the examples against the changes you have made to the module locally:
-
-* To build all the examples:
-
-    ```bash
-    ./build.sh build
-    ```
-
-* To run all the examples:
-
-    ```bash
-    ./build.sh run
     ```
