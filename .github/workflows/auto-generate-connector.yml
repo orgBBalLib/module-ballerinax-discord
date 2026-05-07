@@ -381,7 +381,7 @@ jobs:
               prBody += `This PR contains only spec/documentation updates — no changes were detected in \`client.bal\` or \`types.bal\`.\n\n`;
               prBody += `> ℹ️ No version bump or analysis is required.\n\n`;
               prBody += `---\n\nManual Review Required - Please review the spec changes and approve if appropriate.\n`;
-              prTitle = `[SPEC UPDATE] Auto-generated connector update - spec only`;
+              prTitle = `[NONE] Auto-generated connector update - no version change`;
             } else {
               // analysis_result.json may not exist if analysis failed
               let analysis = null;
